@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "miracl.h": "c",
+        "time.h": "c",
+        "string.h": "c"
+    }
+}

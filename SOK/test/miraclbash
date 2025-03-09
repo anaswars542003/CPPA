@@ -1,0 +1,45 @@
+gcc –I. –c –O2 mrcore.c
+gcc –I. –c –O2 mrarth0.c
+gcc –I. –c –O2 mrarth1.c
+gcc –I. –c –O2 mrarth2.c
+gcc –I. –c –O2 mrsmall.c
+gcc –I. –c –O2 mrio1.c
+gcc –I. –c –O2 mrio2.c
+gcc –I. –c –O2 mrgcd.c
+gcc –I. –c –O2 mrjack.c
+gcc –I. –c –O2 mrxgcd.c
+gcc –I. –c –O2 mrarth3.c
+gcc –I. –c –O2 mrbits.c
+gcc –I. –c –O2 mrrand.c
+gcc –I. –c –O2 mrprime.c
+gcc –I. –c –O2 mrcrt.c
+gcc –I. –c –O2 mrscrt.c
+gcc –I. –c –O2 mrmonty.c
+gcc –I. –c –O2 mrpower.c
+gcc –I. –c –O2 mrsroot.c
+gcc –I. –c –O2 mrlucas.c
+gcc –I. –c –O2 mrshs.c
+gcc –I. –c –O2 mrshs256.c
+gcc –I. –c –O2 mraes.c
+gcc –I. –c –O2 mrgcm.c
+gcc –I. –c –O2 mrfpe.c
+gcc –I. –c –O2 mrstrong.c
+gcc –I. –c –O2 mrcurve.c
+gcc –I. –c –O2 mrbrick.c
+gcc –I. –c –O2 mrebrick.c
+gcc –I. –c –O2 mrzzn2.c
+gcc –I. –c –O2 mrzzn2b.c
+gcc –I. –c –O2 mrzzn3.c
+gcc –I. –c –O2 mrecn2.c
+gcc –I. –c –O2 mrfast.c
+gcc –I. –c –O2 mralloc.c
+gcc –I. –c –O2 mrshs512.c
+gcc –I. –c –O2 mrsha3.c
+gcc –I. –c –O2 mrec2m.c
+gcc –I. –c –O2 mrgf2m.c
+gcc –I. –c –O2 mrkcm.c
+
+ar rc miracl.a mrcore.a mrarth0.a mrarth1.a mrarth2.a mrsmall.a mrio1.a mrio2.a mrgcd.a mrjack.a mrxgcd.a mrarth3.a mrbits.a mrrand.a mrprime.a mrcrt.a mrscrt.a mrmonty.a mrpower.a mrsroot.a mrlucas.a mrshs.a 
+ar r miracl.a mrshs256.a mraes.a mrgcm.a mrfpe.a mrstrong.a mrcurve.a mrbrick.a mrebrick.a mrzzn2.a mrzzn2b.a mrzzn3.a mrecn2.a mrfast.a mralloc.a mrshs512.a mrsha3.a mrec2m.a mrgf2m.a mrkcm.a
+
+

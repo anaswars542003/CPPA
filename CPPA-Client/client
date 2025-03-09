@@ -1,0 +1,3 @@
+rm a.out
+cc vehicleclient.c -I./include libmiracl.a -lhiredis -g
+./a.out
