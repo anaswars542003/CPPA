@@ -1,0 +1,5 @@
+rm sok.a
+gcc -O2 -c sok.c -I./include
+ar rc sok.a sok.o
+rm sok.o
+
