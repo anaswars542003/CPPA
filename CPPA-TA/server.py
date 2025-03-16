@@ -18,7 +18,7 @@ msk = int("29d8325cb77407dd3bd39158ce89f5c62e5d764e0aa64a6477973560abdaae47", 16
 def create_cert(c1_c2,  cid):
     r = redis.Redis(host='localhost', port=6379, db=0)
     r.set(cid, c1_c2)
-    '''
+    
     asn1_schema = asn1tools.compile_files("ASN/CertificateBase.asn1","oer")
 
     to_be_signed_data = {
@@ -64,16 +64,18 @@ def create_cert(c1_c2,  cid):
     #encoded_certificate oer( BLOB )
     #cid   cid
     expiry_time = int(time.time()) + 7200  # 2 hours from now (UNIX timestamp)
+    current_time = int(time.time())
 
     # Convert expiry_time to MySQL TIMESTAMP format
     expiry_timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(expiry_time))
+    cur_timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(current_time))
 
-    sql = "INSERT INTO vehicle_certificates (cid, oer, expiry_time) VALUES (%s, %s, %s)"
-    values = (cid, encoded_certificate, expiry_timestamp)
+    sql = "INSERT INTO certificates (cid, oer, expiry_time, created_at) VALUES (%s, %s, %s, %s)"
+    values = (cid, encoded_certificate, expiry_timestamp, cur_timestamp)
     cursor.execute(sql, values)
     cnx.commit()
     cnx.close()
-    '''
+    
 
 def publish_apkey(c1, c2, client_socket):
     c1_x = c1.x().to_bytes(32, byteorder = 'big')
@@ -144,7 +146,9 @@ def private_store(c1,c3, cid, pk_bytes, user_id):
 
 def start_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print('socket created')
     server_socket.bind((HOST, PORT))
+    print('socket binded')
     server_socket.listen(5)
     print(f"Server listening on {HOST}:{PORT}")
     
