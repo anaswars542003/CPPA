@@ -2,7 +2,6 @@ import socket
 import hashlib
 from ecdsa.ellipticcurve import Point
 from ecdsa.curves import SECP256k1, NIST256p
-import redis
 import mysql.connector
 
 
@@ -26,7 +25,7 @@ def trace_id(cid):
     c1_x, c1_y , c3_x, c3_y, current_i = result
     
     cursor.close()
-    cnx.close()
+    
 
     curve = NIST256p.curve
     
@@ -45,6 +44,21 @@ def trace_id(cid):
     print(hex(pk_x))
     pk_y = pk.y()
     print(hex(pk_y))
+    
+    pk_x = pk_x.to_bytes(32, byteorder = 'big')
+    pk_y = pk_y.to_bytes(32, byteorder = 'big')
+    
+    pk_bytes = pk_x + pk_y
+    cursor = cnx.cursor()
+    find_id_query2 = ("SELECT pk, id_user  FROM pk_id WHERE pk = %(pk_bytes)s")
+    cursor.execute(find_id_query2, {'pk_bytes':pk_bytes})
+    result = cursor.fetchone()
+    cursor.close()
+    cnx.close()
+    
+    t, user_id = result
+    print(f"user id : {user_id}")
+    
 
 
 cid = int(input(),16).to_bytes(32, byteorder='big')

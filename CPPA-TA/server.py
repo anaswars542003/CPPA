@@ -2,16 +2,58 @@ import socket
 import hashlib
 from ecdsa.ellipticcurve import Point
 from ecdsa.curves import SECP256k1, NIST256p
+from ecdsa import SigningKey
 import redis
 import mysql.connector
 import struct
+import time
+import asn1tools
+from ecdsa.util import sigdecode_string
 
 HOST = '127.0.0.1'
 PORT = 12346
+msk = int("29d8325cb77407dd3bd39158ce89f5c62e5d764e0aa64a6477973560abdaae47", 16)
 
 
 def create_cert(c1_c2,  cid):
-    pass
+    r = redis.Redis(host='localhost', port=6379, db=0)
+    r.set(cid, c1_c2)
+    asn1_schema = asn1tools.compile_files("ASN/CertificateBase.asn1","oer")
+
+    to_be_signed_data = {
+        "id" : cid,
+        "validity" : {"end" : int(time.time())},
+        "anonymousPK" : c1_c2
+    }
+    encoded_tobe_signed = asn1_schema.encode('ToBeSignedCertificate', to_be_signed_data)
+
+    hash_digest = hashlib.sha256(encoded_tobe_signed).digest()
+    private_key = SigningKey.from_secret_exponent(msk, curve=NIST256p)
+    public_key = private_key.get_verifying_key()
+
+    signature = private_key.sign(hash_digest)
+    r, s = der_decode_signature(signature)
+
+
+    signature_data = {
+        "ecdsaNistP256Signature": {
+            "rSig": {
+                "x": public_key.pubkey.point.x().to_bytes(32, byteorder='big'),
+                "y": public_key.pubkey.point.y().to_bytes(32, byteorder='big')
+            },
+            "sSig": s.to_bytes(32, byteorder='big')
+        }
+    }
+
+    certificate_data = {
+        "version": 1,
+        "tobeSignedData": to_be_signed_data,
+        "signature": signature_data
+    }
+
+    encoded_certificate = asn1_schema.encode('CertificateBase', certificate_data)
+    print("OER Encoded CertificateBase:", encoded_certificate.hex())
+
 
 
 
@@ -34,7 +76,7 @@ def publish_apkey(c1, c2, client_socket):
     
 
 
-def private_store(c1,c3, cid):
+def private_store(c1,c3, cid, pk_bytes, user_id):
     c1_x = c1.x().to_bytes(32, byteorder = 'big')
     c1_y = c1.y().to_bytes(32, byteorder = 'big')
     c3_x = c3.x().to_bytes(32, byteorder = 'big')
@@ -61,6 +103,21 @@ def private_store(c1,c3, cid):
     cursor.execute(insert_query, data_cid)
     cnx.commit()
     cursor.close()
+    
+    
+    cursor = cnx.cursor()
+    
+    insert_query2 = ("INSERT INTO pk_id"
+    			"(pk, id_user)"
+    			"VALUES (%(pk_bytes)s, %(user_id)s)")
+    			
+    data_pk_id = {
+	'pk_bytes' : pk_bytes,
+	'user_id' : user_id,
+    }
+    cursor.execute(insert_query2, data_pk_id)
+    cnx.commit()
+    cursor.close()
 
     cnx.close()
 
@@ -72,7 +129,7 @@ def start_server():
     server_socket.bind((HOST, PORT))
     server_socket.listen(5)
     print(f"Server listening on {HOST}:{PORT}")
-    msk = int("29d8325cb77407dd3bd39158ce89f5c62e5d764e0aa64a6477973560abdaae47", 16)
+    
 
     try:
         while True:
@@ -94,6 +151,8 @@ def start_server():
             print(f"Public key recieved \npk_x:{hex(pk.x())}\npk_y:{hex(pk.y())}")
             
             u = int("5e5205324863018f4f9454c699eb160688355046e66418647c51b302a90ffd72", 16)
+            print('user id: ')
+            user_id = input()
             
             pk_bytes = x_bytes + y_bytes
             byte_representation = struct.pack('I', 1)
@@ -111,7 +170,7 @@ def start_server():
             print(f"\nc3_x:{hex(c3.x())}\nc3_y:{hex(c3.y())}\n\n")
             
             cid = publish_apkey(c1, c2, client_socket)
-            private_store(c1, c3, cid)
+            private_store(c1, c3, cid, data, user_id)
             
 
 

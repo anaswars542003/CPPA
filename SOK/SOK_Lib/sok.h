@@ -3,7 +3,7 @@
 #define SOK_H
 
 
-typedef char signature_t[96]; 
+typedef char signature_t[65]; 
 
 //signature_t is in the format z [32] , Rx[32], Ry[32]
 

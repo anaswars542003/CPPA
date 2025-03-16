@@ -43,6 +43,7 @@ void gen_proof(big q, epoint* p, big sk, char* c, char* msg,  size_t msg_size, i
     bytes_to_big(32,c,r);
     bytes_to_big(32,c+32,e);
     epoint_set(r,e,0,c1);
+    int n;
 
     gen_random_number(r, q);
 
@@ -61,12 +62,12 @@ void gen_proof(big q, epoint* p, big sk, char* c, char* msg,  size_t msg_size, i
         add(z,q,z);
 
     
-    epoint_get(R, r, e);
+    n = epoint_get(R, r, r);
     
 
     big_to_bytes(32, z, sig, TRUE);
     big_to_bytes(32, r, (sig+32), TRUE);
-    big_to_bytes(32, e, (sig+64), TRUE);
+    sig[64] = (char) n;
                                          // once r is randomised remove this
     mirkill(z);
     epoint_free(c1);
@@ -87,6 +88,7 @@ BOOL verify_proof(big q, epoint* p, char* c, char* msg, size_t msg_size, int t, 
     epoint* tmp = epoint_init();
     epoint* c1 = epoint_init();
     epoint* c2 = epoint_init();
+    int n;
     
     //set point c1 and c2 from APK c
     bytes_to_big(32, c, e);
@@ -101,8 +103,8 @@ BOOL verify_proof(big q, epoint* p, char* c, char* msg, size_t msg_size, int t, 
     //parse signature
     bytes_to_big(32, sig, z);
     bytes_to_big(32, (sig + 32), e);
-    bytes_to_big(32, (sig + 64), r);
-    epoint_set(e,r,0,R);
+    n = (int)sig[64];
+    epoint_set(e,e,n,R);
       
     //parsed signature R  and z
 
@@ -120,7 +122,7 @@ BOOL verify_proof(big q, epoint* p, char* c, char* msg, size_t msg_size, int t, 
     //R_cal = tmp + R_cal
     ecurve_add(tmp,R_cal);
 
-    int n = epoint_comp(R_cal,R);
+    n = epoint_comp(R_cal,R);
 
     epoint_free(R_cal);
     epoint_free(tmp);
@@ -139,44 +141,79 @@ BOOL batch_verify_proof(big q, epoint* p, int n, char* c[], char* msg[], size_t 
     big e = mirvar(0);
     big x = mirvar(0);
     big y = mirvar(0);
+    big z = mirvar(0);
     big v_z = mirvar(0);
     big v_e = mirvar(0);
     epoint* R = epoint_init();
-    epoint* sum_R_v = epoint_init();
+    epoint* sum_R_v = epoint_init();         
+    epoint* sum_v_z_P = epoint_init();
     epoint* c1 = epoint_init();
     epoint* c2 = epoint_init();
-    epoint* tmp = epoint_init();
-    epoint* check_sum = epoint_init(); 
+    epoint* v_z_C_P = epoint_init();
+    int oe ;
 
     if(n > 32){
         n = 32;
     }
 
-    convert(vectors[0], v_z);
+    for(int i = 0; i < n; i++){
+        convert(vectors[i], e);    //e - vi
 
-    //parse 0th Ri from sig[0] 
-    bytes_to_big(32, (sig[0] + 32), x);
-    bytes_to_big(32, (sig[0] + 64), y);
-    epoint_set(x,y,0,R);
-    //calculate v0 * R0 
-    ecurve_mult(v_z, R, R);
-    epoint_copy(R,sum_R_v);
-    //sum_R_v = v_z * R[0] 
-    for(int i = 1; i < n; i++)
-    {
-        convert(vectors[i], v_z);
-        //parse ith Ri from sig[i] 
         bytes_to_big(32, (sig[i] + 32), x);
-        bytes_to_big(32, (sig[i] + 64), y);
-        epoint_set(x,y,0,R);
-        //calculate vi * Ri 
-        ecurve_mult(v_z, R, R);
-        ecurve_add(R, sum_R_v);
+        oe = (int)sig[i][64];
+        epoint_set(x,x,oe,R);     //R -  Ri
+        //must find viRi  ---   mult(e, R)
+
+        ecurve_mult(e, R, R);        //vi * Ri
+
+        ecurve_add(R, sum_R_v);      //sum of all vi_Ri
     }
-    // sum_R_v = v_z[i] * R[i] for i = 0 to n 
 
+    //dont change sum_R_v  now ...
 
+    for(int i = 0; i < n; i++){
+        //parse  C1
+        bytes_to_big(32, c[i], x);
+        bytes_to_big(32, c[i]+32, y);
+        epoint_set(x,y,0,c1);
 
+        //set c1 = c1 + p
+        ecurve_add(p, c1);
+
+        //parse zi
+        bytes_to_big(32, sig[i], z);
+
+        //vi * zi
+        premult(z, vectors[i], v_z);
+
+        //vi * zi(C1i + P)
+        ecurve_mult(v_z, c1, c1);
+        
+        //total_sum
+        ecurve_add(c1,  v_z_C_P);
+        
+    }
+
+    for(int i = 0; i < n; i++){
+        //parse  C2
+        bytes_to_big(32, c[i]+64, x);
+        bytes_to_big(32, c[i]+96, y);
+        epoint_set(x,y,0,c2);
+
+        cal_e_hash(c[i], msg[i], msg_size[i], e);
+
+        premult(e, vectors[i], v_e);
+
+        //v_e = vi * ei
+
+        //mult(vieiC2)
+
+        ecurve_mult(v_e, c2, c2);
+        ecurve_add(c2, v_z_C_P);
+        
+    }
+
+   
     mirkill(e);
     mirkill(x);
     mirkill(y);
@@ -184,9 +221,11 @@ BOOL batch_verify_proof(big q, epoint* p, int n, char* c[], char* msg[], size_t 
     mirkill(v_e);
     epoint_free(R);
     epoint_free(sum_R_v);
+    epoint_free(sum_v_z_P);
     epoint_free(c1);
     epoint_free(c2);
+    epoint_free(v_z_C_P);
 
-    return TRUE;
+    return  epoint_comp(v_z_C_P, sum_R_v);
 
 }
