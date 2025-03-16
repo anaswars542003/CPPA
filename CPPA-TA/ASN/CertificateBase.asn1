@@ -35,9 +35,7 @@ EcdsaP256Signature ::= SEQUENCE {
 }
 
 EccP256CurvePoint::= SEQUENCE {
-  x OCTET STRING (SIZE (32)),
-  y OCTET STRING (SIZE (32))
-
+  x OCTET STRING (SIZE (32))
 }
 
 

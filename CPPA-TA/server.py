@@ -18,11 +18,12 @@ msk = int("29d8325cb77407dd3bd39158ce89f5c62e5d764e0aa64a6477973560abdaae47", 16
 def create_cert(c1_c2,  cid):
     r = redis.Redis(host='localhost', port=6379, db=0)
     r.set(cid, c1_c2)
+    '''
     asn1_schema = asn1tools.compile_files("ASN/CertificateBase.asn1","oer")
 
     to_be_signed_data = {
-        "id" : cid,
-        "validity" : {"end" : int(time.time())},
+        "id" :  cid,
+        "validity" : {"end" : int(time.time()) +7200 },
         "anonymousPK" : c1_c2
     }
     encoded_tobe_signed = asn1_schema.encode('ToBeSignedCertificate', to_be_signed_data)
@@ -31,31 +32,48 @@ def create_cert(c1_c2,  cid):
     private_key = SigningKey.from_secret_exponent(msk, curve=NIST256p)
     public_key = private_key.get_verifying_key()
 
-    signature = private_key.sign(hash_digest)
-    r, s = der_decode_signature(signature)
+    signature = private_key.sign_digest_deterministic(hash_digest)
+    r, s = sigdecode_string(signature, NIST256p.order)
 
-
-    signature_data = {
-        "ecdsaNistP256Signature": {
+    signature_data = (
+        "ecdsaNistP256Signature", 
+        {
             "rSig": {
-                "x": public_key.pubkey.point.x().to_bytes(32, byteorder='big'),
-                "y": public_key.pubkey.point.y().to_bytes(32, byteorder='big')
+                "x": r.to_bytes(32, byteorder='big')
+                
             },
             "sSig": s.to_bytes(32, byteorder='big')
         }
-    }
+    )
 
     certificate_data = {
-        "version": 1,
+        "version": 3,
         "tobeSignedData": to_be_signed_data,
         "signature": signature_data
     }
 
     encoded_certificate = asn1_schema.encode('CertificateBase', certificate_data)
-    print("OER Encoded CertificateBase:", encoded_certificate.hex())
+    
 
+    cnx = mysql.connector.connect(user = 'TAServer', 
+                                  password = '123456', 
+                                  host = '127.0.0.1', 
+                                  database = 'PRIVATE_ID')
+    
+    cursor = cnx.cursor()
+    #encoded_certificate oer( BLOB )
+    #cid   cid
+    expiry_time = int(time.time()) + 7200  # 2 hours from now (UNIX timestamp)
 
+    # Convert expiry_time to MySQL TIMESTAMP format
+    expiry_timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(expiry_time))
 
+    sql = "INSERT INTO vehicle_certificates (cid, oer, expiry_time) VALUES (%s, %s, %s)"
+    values = (cid, encoded_certificate, expiry_timestamp)
+    cursor.execute(sql, values)
+    cnx.commit()
+    cnx.close()
+    '''
 
 def publish_apkey(c1, c2, client_socket):
     c1_x = c1.x().to_bytes(32, byteorder = 'big')
@@ -130,7 +148,6 @@ def start_server():
     server_socket.listen(5)
     print(f"Server listening on {HOST}:{PORT}")
     
-
     try:
         while True:
             client_socket, client_adddress = server_socket.accept()
