@@ -58,6 +58,7 @@ def trace_id(cid):
     
     t, user_id = result
     print(f"user id : {user_id}")
+    return (pk_bytes, current_i)
     
 
 

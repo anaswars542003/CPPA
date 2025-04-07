@@ -171,7 +171,6 @@ def start_server():
             mpk = msk * NIST256p.generator
             print(f"Public key recieved \npk_x:{hex(pk.x())}\npk_y:{hex(pk.y())}")
             
-            u = int("5e5205324863018f4f9454c699eb160688355046e66418647c51b302a90ffd72", 16)
             print('user id: ')
             user_id = input()
             

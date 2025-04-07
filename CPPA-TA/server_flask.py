@@ -1,5 +1,14 @@
 from flask import Flask, request, jsonify
 import mysql.connector
+from ecdsa.ellipticcurve import Point
+from ecdsa.curves import  NIST256p
+import struct
+import hashlib
+from server import create_cert
+from flask import Flask, request, jsonify
+import binascii
+
+msk = int("29d8325cb77407dd3bd39158ce89f5c62e5d764e0aa64a6477973560abdaae47", 16)
 
 app = Flask(__name__)
 
@@ -40,9 +49,6 @@ def get_oer():
 
 
 
-@app.route('/gen_new_apk', methods=['POST'])
-def gen_new_apk():
-    pass
 
 if __name__ == '__main__':
     app.run(debug=True)
